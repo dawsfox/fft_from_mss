@@ -1,11 +1,8 @@
 # build an executable named gpiod-test and gpio-event
 CC ?= gcc
 
-gpiod-test: gpiod-test.c
-	$(CC) -lgpiod -o gpiod-test gpiod-test.c
-
-gpio-event: gpio-event-test.c
-	$(CC) -o gpio-event  gpio-event-test.c
+start_stop_test: start_stop_test.c
+	$(CC) -lgpiod -o start_stop_test start_stop_test.c
 
 lsram-counter-test: lsram-counter-test.c
 	$(CC) -O2 -o lsram-counter-test lsram-counter-test.c
