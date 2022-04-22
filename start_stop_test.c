@@ -76,8 +76,14 @@ int main()
 	}
   
 	struct gpiod_line *fft_start;
+	struct gpiod_line *fft_done;
 	// accompanying FPGA implementation has changed GPIO2 bit 17
 	// from LED2 to a start signal for the FFT block
+	// first check done; should start low
+	fft_done = gpiod_chip_get_line(chip, sw2_GPIO30);
+	gpiod_line_request_input(fft_done, "fft_done");
+	printf("fft_done on start: %d\n", gpiod_line_get_value(fft_done));
+
 	fft_start = gpiod_chip_get_line(chip, led_GPIO17);
 	if (!fft_start) {
 		perror("fft_start Get line failed\n");
@@ -88,9 +94,6 @@ int main()
 	gpiod_line_set_value(fft_start, 1);
 	printf("fft_start signal set HIGH\n");
 	
-	struct gpiod_line *fft_done;
-	fft_done = gpiod_chip_get_line(chip, sw2_GPIO30);
-	gpiod_line_request_input(fft_done, "fft_done");
 	int value = -1;
 	while (value != 1) {
 		value = gpiod_line_get_value(fft_done);
