@@ -100,6 +100,8 @@ int main()
 		sleep(1);
 	}
 	printf("fft_done signal read HIGH\n");
+	// now reset start signal
+	gpiod_line_set_value(fft_start, 0);
 	// release line holds
 	gpiod_line_release(fft_start);
 	gpiod_line_release(fft_done);
