@@ -27,6 +27,7 @@
 #define fft_done_GPIO30 30
 #define axi_error_GPIO31 31
 #define mss_start_GPIO17 17
+#define mss_reset_GPIO18 18
 
 char uio_id_str[] = "fpga_lsram";
 char sysfs_template[] = "/sys/class/uio/uio%d/%s";
@@ -196,6 +197,7 @@ int main(int argc, char* argvp[])
 	    struct gpiod_line *fft_start;
 	    struct gpiod_line *fft_done;
 	    struct gpiod_line *axi_error;
+	    struct gpiod_line *mss_reset;
 	    fft_done = gpiod_chip_get_line(chip, fft_done_GPIO30);
 	    axi_error = gpiod_chip_get_line(chip, axi_error_GPIO31);
 	    gpiod_line_request_input(fft_done, "fft_done");
@@ -204,22 +206,39 @@ int main(int argc, char* argvp[])
 	    printf("axi_error on start: %d\n", gpiod_line_get_value(axi_error));
 
 	    fft_start = gpiod_chip_get_line(chip, mss_start_GPIO17);
+	    mss_reset = gpiod_chip_get_line(chip, mss_reset_GPIO18);
 	    if (!fft_start) {
 		perror("fft_start Get line failed\n");
    		gpiod_chip_close(chip);
 		goto end;
 	    }
+	    if (!mss_reset) {
+		perror("mss_reset Get line failed\n");
+		gpiod_chip_close(chip);
+		goto end;
+	    }
 	    /* config as output and set a description */
             printf("\nSignaling AXI master to write\n");
 	    gpiod_line_request_output(fft_start, "fft_start", GPIOD_LINE_ACTIVE_STATE_HIGH);
+	    gpiod_line_request_output(mss_reset, "mss_reset", GPIOD_LINE_ACTIVE_STATE_HIGH);
+	    // first set reset high
+	    gpiod_line_set_value(mss_reset, 1);
+	    sleep(1); //delay
+	    // lower reset signal
+	    gpiod_line_set_value(mss_reset, 0); 
+	    // signal to start fft
 	    gpiod_line_set_value(fft_start, 1);
 	
 	    int value = -1;
-	    while (value != 1) {
+	    int counter = 0;
+	    while (value != 1 && counter < 5) {
 		value = gpiod_line_get_value(fft_done);
 		sleep(1);
+		counter++;
 	    }
-	    printf("fft_done signal read HIGH\n");
+	    printf("fft_done signal read HIGH or ERROR\n");
+	    //check error signal
+	    printf("axi_error after loop: %d\n", gpiod_line_get_value(axi_error));
 	    // now reset start signal
 	    gpiod_line_set_value(fft_start, 0);
 
