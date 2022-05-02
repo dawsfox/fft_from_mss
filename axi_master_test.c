@@ -25,6 +25,7 @@
 #define NUM_UIO_DEVICES		(32)
 
 #define fft_done_GPIO30 30
+#define axi_error_GPIO31 31
 #define mss_start_GPIO17 17
 
 char uio_id_str[] = "fpga_lsram";
@@ -146,9 +147,9 @@ int main(int argc, char* argvp[])
     }
 
     while(1) {
-        printf("\n\t # Choose one of  the following options: \n\t Enter 1 to perform AXI-to-LSRAM test \n\t Enter 2 to Exit\n");
+        printf("\n\t # Choose one of  the following options: \n\t Enter 1 to perform LSRAM test \n\t Enter 2 to perform AXI Master to LSRAM test \n\t Enter 3 to Exit\n");
         scanf("%c%*c",&d1);
-        if(d1=='2'){
+        if(d1=='3'){
             break;
         }else if(d1=='1'){
             mem_ptr0 = mmap(NULL, mmap_size, PROT_READ|PROT_WRITE, MAP_SHARED, uioFd_0, 0*getpagesize());
@@ -182,7 +183,7 @@ int main(int argc, char* argvp[])
 	    printf("%u cycles for writing\n", (cyc_mid-cyc_beg));
 	    printf("%u cycles for reading\n", (cyc_end-cyc_mid));
 
-        }else if(d1=='3'){
+        }else if(d1=='2'){
 	    
 	    char *chipname = "/dev/gpiochip0";
 	    struct gpiod_chip *chip;
@@ -194,9 +195,13 @@ int main(int argc, char* argvp[])
   
 	    struct gpiod_line *fft_start;
 	    struct gpiod_line *fft_done;
+	    struct gpiod_line *axi_error;
 	    fft_done = gpiod_chip_get_line(chip, fft_done_GPIO30);
+	    axi_error = gpiod_chip_get_line(chip, axi_error_GPIO31);
 	    gpiod_line_request_input(fft_done, "fft_done");
+	    gpiod_line_request_input(axi_error, "axi_error");
 	    printf("fft_done on start: %d\n", gpiod_line_get_value(fft_done));
+	    printf("axi_error on start: %d\n", gpiod_line_get_value(axi_error));
 
 	    fft_start = gpiod_chip_get_line(chip, mss_start_GPIO17);
 	    if (!fft_start) {
@@ -233,16 +238,18 @@ int main(int argc, char* argvp[])
             printf("\nReading data starting from address 0x61000000 \n");
 	    unsigned first_test = *(mem_ptr0);
 	    unsigned second_test = *(mem_ptr0+1);
-	    printf("test1: %d\t test2: %d\n", first_test, second_test);
+	    unsigned third = *(mem_ptr0+2);
+	    unsigned fourth = *(mem_ptr0+3);
+	    printf("first four of LSRAM: %d\t%d\t%d\t%d\n", first_test, second_test, third, fourth);
 	    gpiod_line_release(fft_start);
 	    gpiod_line_release(fft_done);
+	    gpiod_line_release(axi_error);
 	
         }else {
-            printf("Enter either 1 or 2\n");
+            printf("Enter either 1, 2, or 3\n");
         }
 end:
         retCode = munmap((void*)mem_ptr0, mmap_size);
-	// release line holds
         printf("unmapped %s\n", uio_device);
     }
 
